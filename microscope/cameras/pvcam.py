@@ -1087,7 +1087,11 @@ class PVParam(object):
     @property
     def available(self):
         """Return whether or not parameter is available on hardware."""
-        return bool(_get_param(self.cam.handle, self.param_id, ATTR_AVAIL))
+        try:
+            return bool(_get_param(self.cam.handle, self.param_id, ATTR_AVAIL))
+        except:
+            # Probably a "C2_FAILED_TO_GET_VALUE" error
+            return False
 
 
     @property
@@ -1383,9 +1387,13 @@ class PVCamera(devices.FloatingDeviceMixin, devices.CameraDevice):
         self._cbs = {'check': CALLBACK(lambda: _cb('check')),
                      'resumed': CALLBACK(lambda: _cb('resumed')),
                      'removed': CALLBACK(lambda: _cb('removed'))}
-        _cam_register_callback(self.handle, PL_CALLBACK_CHECK_CAMS, self._cbs['check'])
-        _cam_register_callback(self.handle, PL_CALLBACK_CAM_REMOVED, self._cbs['removed'])
-        _cam_register_callback(self.handle, PL_CALLBACK_CAM_RESUMED, self._cbs['resumed'])
+        try:
+            _cam_register_callback(self.handle, PL_CALLBACK_CHECK_CAMS, self._cbs['check'])
+            _cam_register_callback(self.handle, PL_CALLBACK_CAM_REMOVED, self._cbs['removed'])
+            _cam_register_callback(self.handle, PL_CALLBACK_CAM_RESUMED, self._cbs['resumed'])
+        except:
+            # Hardware probably doesn't support callbacks.
+            self._using_callback = False
         # Repopulate _params.
         self._params = {}
         # Add chip before anything else, as chip name is used to add missing enums.
